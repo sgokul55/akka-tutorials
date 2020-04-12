@@ -8,8 +8,6 @@ import akka.actor.typed.javadsl.Behaviors;
 import akka.actor.typed.javadsl.Receive;
 import akka.japi.function.Function;
 
-import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,14 +34,19 @@ public class ActorInventoryManagement {
         @Override
         public Receive<Command> createReceive() {
             return newReceiveBuilder()
-                    .onMessage(Update.class, processTheCommand()).onMessage(View.class, param -> {
-                        System.out.println("Total stocks now " + stockCount);
-                        return this;
-                    })
+                    .onMessage(Update.class, handleUpdateCommand())
+                    .onMessage(View.class, handleViewCommand())
                     .build();
         }
 
-        private Function<Update, Behavior<Command>> processTheCommand() {
+        private Function<View, Behavior<Command>> handleViewCommand() {
+            return param -> {
+                System.out.println("Total stocks now " + stockCount);
+                return this;
+            };
+        }
+
+        private Function<Update, Behavior<Command>> handleUpdateCommand() {
             return param -> {
                 if (param.equals(Update.INCREMENT)) {
                     stockCount++;
@@ -67,7 +70,9 @@ public class ActorInventoryManagement {
         interface Command {
         }
     }
-
+    /**
+     * Task which increments the inventory
+     */
     public static class InventoryIncrementer implements Runnable {
 
         private ActorSystem actor_inventory;
@@ -81,7 +86,9 @@ public class ActorInventoryManagement {
             actor_inventory.tell(AkkaInventory.Update.INCREMENT);
         }
     }
-
+    /**
+     * Task which decrements the inventory
+     */
     public static class InventoryDecrementer implements Runnable {
 
         private ActorSystem actor_inventory;
