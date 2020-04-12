@@ -5,27 +5,29 @@ import java.util.List;
 
 public class InventoryManagement {
 
-    public static final int NO_OF_THREADS = 10_000;
+    /**
+     * Basic inventory Bean which maintains the stock count.
+     */
+    public static class Inventory {
 
-    public static void main(String[] args) {
+        private long stockCount;
 
-
-        Inventory inventory = new Inventory(0);
-
-        List<Thread> incrementer = new ArrayList<>();
-        List<Thread> decrementer = new ArrayList<>();
-        // Add the incrementer and decrementer tasks
-        for (int i = 0; i < NO_OF_THREADS; i++) {
-            incrementer.add(new Thread(new InventoryIncrementer(inventory)));
-            decrementer.add(new Thread(new InventoryDecrementer(inventory)));
+        public Inventory(long stockCount) {
+            this.stockCount = stockCount;
         }
-        for (int i = 0; i < NO_OF_THREADS; i++) {
-            incrementer.get(i).start();
+
+        public void incrementItemByOne() {
+            this.stockCount++;
         }
-        for (int i = 0; i < NO_OF_THREADS; i++) {
-            decrementer.get(i).start();
+
+        public void decrementItemByOne() {
+            this.stockCount--;
         }
-        inventory.printStockCount();
+
+        public void printStockCount() {
+            System.out.println("Total remaining stock is " + stockCount);
+        }
+
     }
 
     /**
@@ -62,28 +64,33 @@ public class InventoryManagement {
         }
     }
 
-    /**
-     * Basic inventory Bean which maintains the stock count.
-     */
-    public static class Inventory {
+    public static final int NO_OF_THREADS = 10_000;
 
-        private long stockCount;
+    public static void main(String[] args) {
 
-        public Inventory(long stockCount) {
-            this.stockCount = stockCount;
-        }
+        Inventory inventory = new Inventory(0);
+        List<Thread> incrementer = addThreads(inventory);
+        List<Thread> decrementer = addThreads(inventory);
 
-        public void incrementItemByOne() {
-            this.stockCount++;
-        }
+        startAllThreads(incrementer);
+        startAllThreads(decrementer);
 
-        public void decrementItemByOne() {
-            this.stockCount--;
-        }
-
-        public void printStockCount() {
-            System.out.println("Total remaining stock is " + stockCount);
-        }
-
+        inventory.printStockCount();
     }
+
+    private static void startAllThreads(List<Thread> threads) {
+        for (int i = 0; i < NO_OF_THREADS; i++) {
+            threads.get(i).start();
+        }
+    }
+
+    private static List<Thread> addThreads(Inventory inventory) {
+        List<Thread> threads = new ArrayList<>();
+        for (int i = 0; i < NO_OF_THREADS; i++) {
+            threads.add(new Thread(new InventoryIncrementer(inventory)));
+        }
+        return threads;
+    }
+
+
 }
