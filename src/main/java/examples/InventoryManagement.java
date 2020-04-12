@@ -69,8 +69,8 @@ public class InventoryManagement {
     public static void main(String[] args) {
 
         Inventory inventory = new Inventory(0);
-        List<Thread> incrementer = addThreads(inventory);
-        List<Thread> decrementer = addThreads(inventory);
+        List<Thread> incrementer = addThreads(inventory, "Increment-Threads");
+        List<Thread> decrementer = addThreads(inventory, "Decrement-Threads");
 
         startAllThreads(incrementer);
         startAllThreads(decrementer);
@@ -84,10 +84,13 @@ public class InventoryManagement {
         }
     }
 
-    private static List<Thread> addThreads(Inventory inventory) {
+    private static List<Thread> addThreads(Inventory inventory, String type) {
         List<Thread> threads = new ArrayList<>();
         for (int i = 0; i < NO_OF_THREADS; i++) {
-            threads.add(new Thread(new InventoryIncrementer(inventory)));
+            if ("Increment-Threads".equals(type))
+                threads.add(new Thread(new InventoryIncrementer(inventory)));
+            else
+                threads.add(new Thread(new InventoryDecrementer(inventory)));
         }
         return threads;
     }
