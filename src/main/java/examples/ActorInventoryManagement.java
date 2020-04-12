@@ -6,32 +6,66 @@ import akka.actor.typed.javadsl.AbstractBehavior;
 import akka.actor.typed.javadsl.ActorContext;
 import akka.actor.typed.javadsl.Behaviors;
 import akka.actor.typed.javadsl.Receive;
+import akka.japi.function.Function;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+
+import static examples.InventoryManagement.startAllThreads;
 
 
 public class ActorInventoryManagement {
 
+    /**
+     * Actor based Inventory.
+     */
+    public static class AkkaInventory extends AbstractBehavior<AkkaInventory.Command> {
 
-    private static final int NO_OF_THREADS = 10000;
+        private long stockCount = 0;
 
-    public static void main(String[] args) {
-        ActorSystem actor_inventory = ActorSystem.create(AkkaInventory.create(), "ActorInventory");
-        List<Thread> incrementer = new ArrayList<>();
-        List<Thread> decrementer = new ArrayList<>();
-        // Add the incrementer and decrementer tasks
-        for (int i = 0; i < NO_OF_THREADS; i++) {
-            incrementer.add(new Thread(new InventoryIncrementer(actor_inventory)));
-            decrementer.add(new Thread(new InventoryDecrementer(actor_inventory)));
+        private AkkaInventory(ActorContext<Command> context) {
+            super(context);
         }
-        for (int i = 0; i < NO_OF_THREADS; i++) {
-            incrementer.get(i).start();
+
+        public static Behavior<Command> create() {
+            return Behaviors.setup(context -> new AkkaInventory(context));
         }
-        for (int i = 0; i < NO_OF_THREADS; i++) {
-            decrementer.get(i).start();
+
+        @Override
+        public Receive<Command> createReceive() {
+            return newReceiveBuilder()
+                    .onMessage(Update.class, processTheCommand()).onMessage(View.class, param -> {
+                        System.out.println("Total stocks now " + stockCount);
+                        return this;
+                    })
+                    .build();
         }
-        actor_inventory.tell(AkkaInventory.Print.PRINT);
+
+        private Function<Update, Behavior<Command>> processTheCommand() {
+            return param -> {
+                if (param.equals(Update.INCREMENT)) {
+                    stockCount++;
+                } else {
+                    stockCount--;
+                }
+                // which behaviour will be used for the next message the actor receives... here same
+                return this;
+            };
+        }
+
+        public static enum Update implements Command {
+            INCREMENT,
+            DECREMENT
+        }
+
+        public static enum View implements Command {
+            PRINT
+        }
+
+        interface Command {
+        }
     }
 
     public static class InventoryIncrementer implements Runnable {
@@ -44,7 +78,7 @@ public class ActorInventoryManagement {
 
         @Override
         public void run() {
-            actor_inventory.tell(AkkaInventory.Increment.INCREMENT);
+            actor_inventory.tell(AkkaInventory.Update.INCREMENT);
         }
     }
 
@@ -58,57 +92,34 @@ public class ActorInventoryManagement {
 
         @Override
         public void run() {
-            actor_inventory.tell(AkkaInventory.Decrement.DECREMENT);
+            actor_inventory.tell(AkkaInventory.Update.DECREMENT);
         }
     }
 
+    private static final int NO_OF_THREADS = 10000;
 
-    public static class AkkaInventory extends AbstractBehavior<AkkaInventory.Command> {
+    public static void main(String[] args) {
+        ActorSystem actor_inventory = ActorSystem.create(AkkaInventory.create(), "ActorInventory");
 
-        long stockCount = 0;
+        List<Thread> incrementer = addThreads(actor_inventory, "Increment-Threads");
+        List<Thread> decrementer = addThreads(actor_inventory, "Decrement-Threads");
 
-        private AkkaInventory(ActorContext<Command> context) {
-            super(context);
-        }
+        startAllThreads(incrementer);
+        startAllThreads(decrementer);
 
-        public static Behavior<Command> create() {
-            return Behaviors.setup(context -> new AkkaInventory(context));
-        }
-
-        @Override
-        public Receive<Command> createReceive() {
-            return newReceiveBuilder()
-                    .onMessage(Increment.class, param -> {
-                        stockCount++;
-                        return this; // which behaviour will be used for the next message the actor receives... here same
-                        // incase if we are switching, it will be useful
-                    }).onMessage(Decrement.class, param -> {
-                        stockCount--;
-                        return this;
-                    }).onMessage(Print.class, param -> {
-                        System.out.println("Total stocks now " + stockCount);
-                        return this;
-                    })
-                    .build();
-        }
-
-
-        public static enum Increment implements Command {
-            INCREMENT
-        }
-
-        public static enum Decrement implements Command {
-            DECREMENT
-        }
-
-        public static enum Print implements Command {
-            PRINT
-        }
-
-        // marker interface
-        interface Command {
-        }
-
-
+        actor_inventory.tell(AkkaInventory.View.PRINT);
+        System.exit(0);
     }
+
+    private static List<Thread> addThreads(ActorSystem actor_inventory, String type) {
+        List<Thread> threads = new ArrayList<>();
+        for (int i = 0; i < NO_OF_THREADS; i++) {
+            if ("Increment-Threads".equals(type))
+                threads.add(new Thread(new InventoryIncrementer(actor_inventory)));
+            else
+                threads.add(new Thread(new InventoryDecrementer(actor_inventory)));
+        }
+        return threads;
+    }
+
 }

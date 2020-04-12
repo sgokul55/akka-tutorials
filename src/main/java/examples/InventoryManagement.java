@@ -1,19 +1,21 @@
 package examples;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
 public class InventoryManagement {
 
     /**
-     * Basic inventory Bean which maintains the stock count.
+     * Basic inventory which maintains the stock count.
      */
     public static class Inventory {
 
         private long stockCount;
 
-        public Inventory(long stockCount) {
-            this.stockCount = stockCount;
+        public Inventory(long initialStock) {
+            this.stockCount = initialStock;
         }
 
         public void incrementItemByOne() {
@@ -67,7 +69,6 @@ public class InventoryManagement {
     public static final int NO_OF_THREADS = 10_000;
 
     public static void main(String[] args) {
-
         Inventory inventory = new Inventory(0);
         List<Thread> incrementer = addThreads(inventory, "Increment-Threads");
         List<Thread> decrementer = addThreads(inventory, "Decrement-Threads");
@@ -78,7 +79,7 @@ public class InventoryManagement {
         inventory.printStockCount();
     }
 
-    private static void startAllThreads(List<Thread> threads) {
+    protected static void startAllThreads(List<Thread> threads) {
         for (int i = 0; i < NO_OF_THREADS; i++) {
             threads.get(i).start();
         }
